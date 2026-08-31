@@ -1356,8 +1356,28 @@ export default class Player extends PathingEntity {
         const stream = Packet.alloc(0);
 
         stream.p1(this.gender);
-        stream.p1(0xff); // prayer icon?
-        stream.p1(0xff); // skull icon?
+
+        // this.headicons bit layout (see player/configs/headicon.constant): 0=skull, 1=multicombat, 2=hint,
+        // 3=protect from melee, 4=protect from missiles, 5=protect from magic, 6=duel, 7=hint2.
+        // The client reads two separate overhead-icon slots here (ClientPlayer.method574): the first byte
+        // indexes the "headicons_pk" sprite sheet (skull), the second indexes "headicons_prayer" (the
+        // three protect prayers) - multicombat/hint/duel/hint2 aren't shown through this packet.
+        let pkIcon = 0xff;
+        if (this.headicons & 0x1) {
+            pkIcon = 0;
+        }
+
+        let prayerIcon = 0xff;
+        if (this.headicons & 0x8) {
+            prayerIcon = 0; // protect from melee
+        } else if (this.headicons & 0x10) {
+            prayerIcon = 1; // protect from missiles
+        } else if (this.headicons & 0x20) {
+            prayerIcon = 2; // protect from magic
+        }
+
+        stream.p1(pkIcon);
+        stream.p1(prayerIcon);
 
         const skippedSlots = [];
 
