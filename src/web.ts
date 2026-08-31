@@ -1,4 +1,5 @@
 import path from 'path';
+import { existsSync, readFileSync } from 'fs';
 
 import ejs from 'ejs';
 import Fastify from 'fastify';
@@ -105,6 +106,14 @@ fastify.route({
         });
     }
 });
+
+const rs2cgiPath = path.join(process.cwd(), 'public', 'rs2.cgi');
+if (existsSync(rs2cgiPath)) {
+    const rs2cgiHtml = readFileSync(rs2cgiPath, 'utf8');
+    fastify.get('/rs2.cgi', (_req, reply) => {
+        reply.type('text/html').send(rs2cgiHtml);
+    });
+}
 
 // cache routes
 

@@ -2,6 +2,7 @@ import fs from 'fs';
 import { parentPort } from 'worker_threads';
 
 import { LoginClient } from '#/server/login/LoginClient.js';
+import { db } from '#/db/query.js';
 import Environment from '#/util/Environment.js';
 
 import { type GenericLoginThreadResponse } from './index.d.js';
@@ -64,6 +65,11 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
 
                 if (!Environment.NODE_PRODUCTION) {
                     staffmodlevel = 4; // dev (destructive commands)
+                } else {
+                    const account = await db.selectFrom('account').select('staffmodlevel').where('username', '=', username).executeTakeFirst();
+                    if (account) {
+                        staffmodlevel = account.staffmodlevel;
+                    }
                 }
 
                 const profile = Environment.NODE_PROFILE;
