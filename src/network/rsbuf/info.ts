@@ -117,11 +117,18 @@ export class PlayerInfoEncoder {
     }
 
     private add(renderer: PlayerRenderer, player: Player, other: Player, pid: number, x: number, z: number, jump: boolean): void {
+        // Bit order here must match the client's getPlayerNewVis() read order exactly:
+        // index(11), dx(5), extendedInfo(1), telejump(1), dz(5). z and the jump/extend-info
+        // flags were previously written out of order (z before jump/flag instead of after),
+        // which didn't change the total bit count but scrambled what each bit meant on the
+        // client side - notably making it misread part of z as the "has extended info" flag,
+        // which then desynced every extended-info block that followed (packet size mismatch,
+        // client disconnect). Only triggers when a second real player newly becomes visible.
         this.buf.pbit(11, pid);
         this.buf.pbit(5, x);
-        this.buf.pbit(5, z);
-        this.buf.pbit(1, jump ? 1 : 0);
         this.buf.pbit(1, 1);
+        this.buf.pbit(1, jump ? 1 : 0);
+        this.buf.pbit(5, z);
         this.lowdefinition(renderer, player, other);
         player.build.players.insert(other.pid);
     }
