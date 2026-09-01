@@ -2,7 +2,8 @@ import fs from 'fs';
 import { parentPort } from 'worker_threads';
 
 import { LoginClient } from '#/server/login/LoginClient.js';
-import { db } from '#/db/query.js';
+import { db, toDbDate } from '#/db/query.js';
+import * as bcrypt from 'bcrypt-ts';
 import Environment from '#/util/Environment.js';
 
 import { type GenericLoginThreadResponse } from './index.d.js';
@@ -61,18 +62,31 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                 });
                 stopTimer();
             } else {
-                let staffmodlevel = 0;
+                const profile = Environment.NODE_PROFILE;
 
-                if (!Environment.NODE_PRODUCTION) {
-                    staffmodlevel = 4; // dev (destructive commands)
-                } else {
-                    const account = await db.selectFrom('account').select('staffmodlevel').where('username', '=', username).executeTakeFirst();
-                    if (account) {
-                        staffmodlevel = account.staffmodlevel;
-                    }
+                let account = await db.selectFrom('account').selectAll().where('username', '=', username).executeTakeFirst();
+                if (!account) {
+                    await db
+                        .insertInto('account')
+                        .values({
+                            username,
+                            password: bcrypt.hashSync(password.toLowerCase(), 10),
+                            registration_ip: remoteAddress,
+                            registration_date: toDbDate(new Date())
+                        })
+                        .executeTakeFirst();
+                    account = await db.selectFrom('account').selectAll().where('username', '=', username).executeTakeFirst();
                 }
 
-                const profile = Environment.NODE_PROFILE;
+                let staffmodlevel = 0;
+                if (!Environment.NODE_PRODUCTION) {
+                    staffmodlevel = 4; // dev (destructive commands)
+                } else if (account) {
+                    staffmodlevel = account.staffmodlevel;
+                }
+
+                const accountId = account ? account.id : 1;
+
                 if (!fs.existsSync(`data/players/${profile}`)) {
                     fs.mkdirSync(`data/players/${profile}`, { recursive: true });
                 }
@@ -87,7 +101,7 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                         reply: 4,
                         staffmodlevel,
                         save: null,
-                        account_id: 1,
+                        account_id: accountId,
                         members: Environment.NODE_MEMBERS
                     });
                 } else {
@@ -100,7 +114,7 @@ async function handleRequests(parentPort: ParentPort, msg: any) {
                         reply: 0,
                         staffmodlevel,
                         save: fs.readFileSync(`data/players/${profile}/${username}.sav`),
-                        account_id: 1,
+                        account_id: accountId,
                         members: Environment.NODE_MEMBERS
                     });
                 }
