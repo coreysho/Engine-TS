@@ -807,6 +807,7 @@ class World {
         player: for (const player of this.newPlayers) {
             // prevent logging in if a player save is being flushed
             if (this.logoutRequests.has(player.username)) {
+                console.error(`[DEBUG-KICK] site=mid-logout username=${player.username}`);
                 player.addSessionLog(LoggerEventType.ENGINE, 'Tried to log in - old session is mid-logout');
 
                 if (isClientConnected(player)) {
@@ -857,6 +858,7 @@ class World {
                 }
 
                 if (player instanceof NetworkPlayer) {
+                    console.error(`[DEBUG-KICK] site=duplicate-username incoming=${player.username} existing=${other.username} existingConnected=${isClientConnected(other)}`);
                     player.addSessionLog(LoggerEventType.ENGINE, 'Tried to log in - already logged in');
                     player.client.send(Uint8Array.from([5]));
                     player.client.close();
@@ -1918,6 +1920,7 @@ class World {
 
                 if (this.logoutRequests.has(username)) {
                     // already logged in (on another world)
+                    console.error(`[DEBUG-KICK] site=onLoginMessage-logoutRequests username=${username}`);
                     client.send(Uint8Array.from([5]));
                     client.close();
                     return;
