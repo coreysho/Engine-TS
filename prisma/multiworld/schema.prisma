@@ -69,13 +69,13 @@ model hiscore_large {
 }
 
 model friendlist {
-    account_id        Int
-    friend_account_id Int
-    profile           String @default("main")
+    account_id      Int
+    friend_username String
+    profile         String @default("main")
 
     created DateTime @default(now())
 
-    @@id([profile, account_id, friend_account_id])
+    @@id([profile, account_id, friend_username])
 }
 
 model ignorelist {

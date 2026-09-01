@@ -196,8 +196,8 @@ export class FriendServerRepository {
         await db
             .deleteFrom('friendlist')
             .where('profile', '=', this.profile)
+            .where('friend_username', '=', targetUsername)
             .where('account_id', 'in', db.selectFrom('account').select('id').where('username', '=', username))
-            .where('friend_account_id', 'in', db.selectFrom('account').select('id').where('username', '=', targetUsername))
             .execute();
     }
 
@@ -212,12 +212,12 @@ export class FriendServerRepository {
             return;
         }
 
-        // I tried to do all this in 1 query but Kyesly wasn't happy
+        // Unlike the old friend_account_id FK, the target does NOT need an account row of their own -
+        // real RS2006 lets you add any name and it just shows as offline (world 0) until/unless that
+        // name ever logs in. Matches how ignorelist.value already stores a raw username, not a FK.
         const account = await db.selectFrom('account').select(['id', 'members']).where('username', '=', username).limit(1).executeTakeFirst();
-        const friendAccount = await db.selectFrom('account').select('id').where('username', '=', targetUsername).limit(1).executeTakeFirst();
 
-        if (!account || !friendAccount) {
-            // todo: respond to the client to delete their entry visually
+        if (!account) {
             return;
         }
 
@@ -239,7 +239,7 @@ export class FriendServerRepository {
             .values({
                 account_id: account.id,
                 profile: this.profile,
-                friend_account_id: friendAccount.id
+                friend_username: targetUsername
             })
             .execute();
     }
@@ -355,16 +355,15 @@ export class FriendServerRepository {
 
     private async loadFriends(username37: bigint) {
         const username = fromBase37(username37);
-        const friendUsernames = await db
-            .selectFrom('account as a')
-            .innerJoin('friendlist as f', 'a.id', 'f.friend_account_id')
-            .innerJoin('account as local', 'local.id', 'f.account_id')
-            .select('a.username')
+        const friends = await db
+            .selectFrom('account as local')
+            .innerJoin('friendlist as f', 'local.id', 'f.account_id')
+            .select('f.friend_username')
             .where('local.username', '=', username)
             .where('f.profile', '=', this.profile)
             .orderBy('f.created', 'asc')
             .execute();
-        const friendUsername37s = friendUsernames.map(f => toBase37(f.username));
+        const friendUsername37s = friends.map(f => toBase37(f.friend_username));
 
         this.playerFriends[username] = friendUsername37s;
     }

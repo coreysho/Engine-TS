@@ -1,7 +1,5 @@
 import type { ColumnType } from 'kysely';
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type Generated<T> = T extends ColumnType<infer S, infer I, infer U> ? ColumnType<S, I | undefined, U> : ColumnType<T, T | undefined, T>;
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export type account = {
@@ -25,7 +23,7 @@ export type account_login = {
 };
 export type friendlist = {
     account_id: number;
-    friend_account_id: number;
+    friend_username: string;
     profile: Generated<string>;
     created: Generated<string>;
 };
