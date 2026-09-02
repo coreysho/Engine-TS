@@ -70,10 +70,14 @@ export default class WordEnc {
         const trimmed = characters.join('').trim();
         const lowercase = trimmed.toLowerCase();
         const filtered = [...lowercase];
-        this.wordEncTlds.filter(filtered);
-        this.wordEncBadWords.filter(filtered);
-        this.wordEncDomains.filter(filtered);
-        this.wordEncFragments.filter(filtered);
+        // Chat censor disabled per Corey's request (2026-09-01) - swear words, URLs, and domains are
+        // no longer masked with "****" in public chat or private messages. The underlying word-filter
+        // algorithm/data is left in place below (just not called), so it's a one-line revert if this
+        // is ever wanted back - just uncomment the four lines below.
+        // this.wordEncTlds.filter(filtered);
+        // this.wordEncBadWords.filter(filtered);
+        // this.wordEncDomains.filter(filtered);
+        // this.wordEncFragments.filter(filtered);
         for (let index = 0; index < this.whitelist.length; index++) {
             let offset = -1;
             while ((offset = lowercase.indexOf(this.whitelist[index], offset + 1)) !== -1) {
