@@ -228,6 +228,9 @@ export class PlayerInfoEncoder {
     }
 
     private writeBlocks(renderer: PlayerRenderer, player: Player, other: Player, masks: number): void {
+        if ((masks & PlayerInfoProt.CHAT) !== 0) {
+            console.error(`[DEBUG-CHAT] writeBlocks observerPid=${player.pid} otherPid=${other.pid} masks=${masks} hasCachedChat=${renderer.has(other.pid, PlayerInfoProt.CHAT)}`);
+        }
         if (masks > 0xff) {
             this.updates.ip2(masks | PlayerInfoProt.BIG);
         } else {

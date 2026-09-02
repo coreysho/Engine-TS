@@ -38,6 +38,7 @@ export default class MessagePublicHandler extends ClientGameMessageHandler<Messa
         out.gdata(player.chatMessage, 0, player.chatMessage.length);
         out.release();
         player.masks |= PlayerInfoProt.CHAT;
+        console.error(`[DEBUG-CHAT] handler fired username=${player.username} rights=${player.chatRights} masks=${player.masks}`);
 
         player.socialProtect = true;
         return true;
