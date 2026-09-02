@@ -10,12 +10,15 @@ import WordPack from '#/wordenc/WordPack.js';
 export default class MessagePublicHandler extends ClientGameMessageHandler<MessagePublic> {
     handle(message: MessagePublic, player: Player): boolean {
         const { colour, effect, input } = message;
+        console.error(`[DEBUG-CHAT] handle() invoked username=${player.username} socialProtect=${player.socialProtect} colour=${colour} effect=${effect} inputLen=${input.length} muted_until=${player.muted_until}`);
 
         if (player.socialProtect || colour < 0 || colour > 11 || effect < 0 || effect > 2 || input.length > 100) {
+            console.error('[DEBUG-CHAT] bailed on socialProtect/colour/effect/length guard');
             return false;
         }
 
         if (player.muted_until !== null && player.muted_until > new Date()) {
+            console.error('[DEBUG-CHAT] bailed on mute check');
             // todo: do we still log their attempt to chat?
             return false;
         }
