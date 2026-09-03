@@ -54,8 +54,12 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             player.addSessionLog(LoggerEventType.MODERATOR, 'Ran cheat', cheat);
         }
 
-        if (!Environment.NODE_PRODUCTION && player.staffModLevel >= 4) {
+        if (player.staffModLevel >= 4) {
             // developer commands
+            // TEMPORARILY unlocked for production (normally `!Environment.NODE_PRODUCTION &&` gates this
+            // whole block) so ::fly can be used to scout unplaced quest content. Revert this line back to
+            // `if (!Environment.NODE_PRODUCTION && player.staffModLevel >= 4) {` and rebuild/restart once
+            // done - see horror-from-the-deep-quest.md in the project docs for why this was needed.
 
             if (cmd[0] === Environment.NODE_DEBUGPROC_CHAR) {
                 // debugprocs are NOT allowed on live ;)
