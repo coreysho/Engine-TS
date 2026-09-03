@@ -705,7 +705,10 @@ export default class Player extends PathingEntity {
         if (this.stepsTaken < 2) {
             const recovered = ((this.baseLevels[PlayerStat.AGILITY] / 6) | 0) + 8;
             this.runenergy = Math.min(this.runenergy + recovered, 10000);
-        } else {
+        } else if (this.staffModLevel < 3) {
+            // Admins (staffModLevel >= 3) and above never deplete run energy - left off the regen
+            // branch above deliberately too, so their energy just holds wherever it already was
+            // (typically full) rather than needing to be re-topped-up every tick.
             const weightKg = this.runweight / 1000;
             const clampWeight = Math.min(Math.max(weightKg, 0), 64);
             const loss = (67 + (67 * clampWeight) / 64) | 0;

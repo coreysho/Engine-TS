@@ -1,5 +1,6 @@
 import { CoordGrid } from '#/engine/CoordGrid.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
+import { MoveStrategy } from '#/engine/entity/MoveStrategy.js';
 import ClientGameMessageHandler from '#/network/game/client/ClientGameMessageHandler.js';
 import MoveClick from '#/network/game/client/model/MoveClick.js';
 import UnsetMapFlag from '#/network/game/server/model/UnsetMapFlag.js';
@@ -36,6 +37,26 @@ export default class MoveClickHandler extends ClientGameMessageHandler<MoveClick
             player.tempRun = 0;
         } else {
             player.tempRun = message.ctrlHeld;
+        }
+
+        // ::fly / noclip: build a straight-line path to the clicked destination ourselves, ignoring
+        // collision entirely. Both branches below (client-trusted path and server findPath()) are
+        // collision-aware and would never hand takeStep() a wall-crossing waypoint for its existing
+        // FLY collision-skip (PathingEntity.ts) to actually act on - that's why plain ::fly did nothing.
+        // Capped at 25 waypoints to match PathingEntity's own waypoints array size and findPath's cap.
+        if (player.moveStrategy === MoveStrategy.FLY) {
+            const dest = message.path[message.path.length - 1];
+            const flyPath: number[] = [];
+            let curX = player.x;
+            let curZ = player.z;
+            for (let i = 0; i < 25 && (curX !== dest.x || curZ !== dest.z); i++) {
+                const dir = CoordGrid.face(curX, curZ, dest.x, dest.z);
+                curX += CoordGrid.deltaX(dir);
+                curZ += CoordGrid.deltaZ(dir);
+                flyPath.push(CoordGrid.packCoord(player.level, curX, curZ));
+            }
+            player.queueWaypoints(flyPath);
+            return true;
         }
 
         // Set new path
