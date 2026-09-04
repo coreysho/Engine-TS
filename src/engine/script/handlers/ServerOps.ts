@@ -344,6 +344,14 @@ const ServerOps: CommandHandlers = {
         const track = state.popInt();
 
         state.pushInt(Midi.getTickLength(track));
+    },
+
+    // custom (Corey, 2026-09-04) - sends a game message to every online player's chatbox, e.g. for the
+    // rare drop broadcast (see drop_table.rs2) and ::yell.
+    [ScriptOpcode.BROADCAST_MES]: state => {
+        const message = state.popString();
+
+        World.broadcastMes(message);
     }
 };
 

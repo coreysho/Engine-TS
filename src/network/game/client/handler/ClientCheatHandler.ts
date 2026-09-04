@@ -50,6 +50,53 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             return false;
         }
 
+        if (cmd === 'home') {
+            // custom (Corey, 2026-09-04) - available to all players, not staff-gated. Destination is
+            // Edgeville, right outside the general store courtyard (map48_54, local 10,57) - the same
+            // landing spot the Amulet of Glory's Edgeville teleport would use, since no teleport jewelry
+            // is scripted in this codebase yet to copy a coordinate from. See claude/home-command.md.
+            player.closeModal();
+
+            if (!player.canAccess()) {
+                player.messageGame('Please finish what you are doing first.');
+                return false;
+            }
+
+            player.clearInteraction();
+            player.unsetMapFlag();
+
+            player.teleJump((48 << 6) + 10, (54 << 6) + 57, 0);
+            player.messageGame('You teleport home to Edgeville.');
+            return true;
+        }
+
+        if (cmd === 'yell') {
+            // custom (Corey, 2026-09-04) - global broadcast chat, available to all players (like
+            // ::home, not staff-gated). Shows who yelled via a name + text rank tag. A true rank
+            // ICON graphic (like the crown MESSAGE_PRIVATE already draws for PMs, see
+            // MessagePrivateEncoder.ts) would need a new client-rendered packet type and matching
+            // Client.java draw code - bigger lift, flagged to Corey rather than guessed at here.
+            // See claude/home-yell-rare-drop.md.
+            if (player.muted_until !== null && player.muted_until > new Date()) {
+                return false;
+            }
+
+            const text = cheat.substring(cmd.length + 1).trim();
+            if (text.length <= 0 || text.length > 100) {
+                return false;
+            }
+
+            let tag = player.displayName;
+            if (player.staffModLevel >= 3) {
+                tag = `Admin ${tag}`;
+            } else if (player.staffModLevel >= 1) {
+                tag = `Mod ${tag}`;
+            }
+
+            World.broadcastMes(`[Yell] ${tag}: ${text}`);
+            return true;
+        }
+
         if (player.staffModLevel >= 2) {
             player.addSessionLog(LoggerEventType.MODERATOR, 'Ran cheat', cheat);
         }

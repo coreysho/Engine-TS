@@ -63,6 +63,7 @@ export const enum ScriptOpcode {
     SPOTANIM_MAP,
     WORLD_DELAY, // official
     MIDI_LENGTH,
+    BROADCAST_MES, // custom (Corey, 2026-09-04) - sends a game message to every online player, for the rare drop broadcast and similar server-wide notices
 
     // Player ops (2000-2499)
     AFK_EVENT = 2000,
@@ -520,6 +521,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['SPOTANIM_MAP', ScriptOpcode.SPOTANIM_MAP],
     ['WORLD_DELAY', ScriptOpcode.WORLD_DELAY],
     ['MIDI_LENGTH', ScriptOpcode.MIDI_LENGTH],
+    ['BROADCAST_MES', ScriptOpcode.BROADCAST_MES],
 
     ['AFK_EVENT', ScriptOpcode.AFK_EVENT],
     ['ALLOWDESIGN', ScriptOpcode.ALLOWDESIGN],
