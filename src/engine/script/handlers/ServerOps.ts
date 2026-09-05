@@ -352,6 +352,15 @@ const ServerOps: CommandHandlers = {
         const message = state.popString();
 
         World.broadcastMes(message);
+    },
+
+    // Real-world minutes since 1 Jan 2025 UTC. map_clock counts ticks since the server booted and
+    // resets on restart, so it cannot be used for anything that has to keep running while a player is
+    // logged out - farming crops above all. Minutes rather than seconds keep this comfortably inside a
+    // 32-bit int, and the 2025 epoch keeps the numbers small.
+    [ScriptOpcode.WORLD_MINUTE]: state => {
+        const epoch = Date.UTC(2025, 0, 1);
+        state.pushInt(Math.max(0, Math.floor((Date.now() - epoch) / 60000)));
     }
 };
 
