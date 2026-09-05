@@ -52,9 +52,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
 
         if (cmd === 'home') {
             // custom (Corey, 2026-09-04) - available to all players, not staff-gated. Destination is
-            // Edgeville, right outside the general store courtyard (map48_54, local 10,57) - the same
-            // landing spot the Amulet of Glory's Edgeville teleport would use, since no teleport jewelry
-            // is scripted in this codebase yet to copy a coordinate from. See claude/home-command.md.
+            // Edgeville (coord 0_48_54_14_35), the spot Corey picked in-game on 2026-09-05.
             player.closeModal();
 
             if (!player.canAccess()) {
@@ -65,18 +63,18 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             player.clearInteraction();
             player.unsetMapFlag();
 
-            player.teleJump((48 << 6) + 10, (54 << 6) + 57, 0);
+            player.teleJump((48 << 6) + 14, (54 << 6) + 35, 0);
             player.messageGame('You teleport home to Edgeville.');
             return true;
         }
 
         if (cmd === 'yell') {
             // custom (Corey, 2026-09-04) - global broadcast chat, available to all players (like
-            // ::home, not staff-gated). Shows who yelled via a name + text rank tag. A true rank
-            // ICON graphic (like the crown MESSAGE_PRIVATE already draws for PMs, see
-            // MessagePrivateEncoder.ts) would need a new client-rendered packet type and matching
-            // Client.java draw code - bigger lift, flagged to Corey rather than guessed at here.
-            // See claude/home-yell-rare-drop.md.
+            // ::home, not staff-gated). Staff yells carry the real rank crown sprite, not the word
+            // "Admin"/"Mod": the client already resolves an "@cr1@"/"@cr2@" marker into
+            // imageModIcons[0]/[1] for public and private chat lines, and Client.java's plain
+            // game-message branch was taught to honour the same marker inline, so no new packet type
+            // was needed after all. See claude/home-yell-rare-drop.md.
             if (player.muted_until !== null && player.muted_until > new Date()) {
                 return false;
             }
@@ -86,11 +84,13 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                 return false;
             }
 
+            // @cr2@ = the gold admin crown, @cr1@ = the silver mod crown; the client strips the
+            // marker and plots the sprite in its place, so it renders as "[Yell] <crown>Name: text".
             let tag = player.displayName;
             if (player.staffModLevel >= 3) {
-                tag = `Admin ${tag}`;
+                tag = `@cr2@${tag}`;
             } else if (player.staffModLevel >= 1) {
-                tag = `Mod ${tag}`;
+                tag = `@cr1@${tag}`;
             }
 
             World.broadcastMes(`[Yell] ${tag}: ${text}`);
