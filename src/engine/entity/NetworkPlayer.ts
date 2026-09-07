@@ -157,8 +157,25 @@ export class NetworkPlayer extends Player {
             return;
         }
 
+        // A modal that is closed and reopened inside the same tick must not send IF_CLOSE first.
+        // The client's IF_CLOSE handler calls unloadCom() on whichever chat/main/side interface is
+        // currently open, which nulls those components so the next draw re-reads them from the
+        // interface cache - discarding every if_settext written earlier in this same tick and
+        // leaving the interface's placeholder text ("line 1", "Option 1") on screen.
+        //
+        // Re-triggering a dialogue you are already in does exactly that: OpNpcHandler calls
+        // clearPendingAction() -> closeModal() (which sets refreshModalClose), the new dialogue
+        // script then sets its text and reopens the *same* npcchat/multi interface, and the
+        // IF_CLOSE lands between the two.
+        //
+        // The close is redundant in that case anyway - every IF_OPENCHAT / IF_OPENMAIN /
+        // IF_OPENSIDE handler in the client already unloads the other layers itself, and unloads
+        // its own layer only when the id actually changes.
         if (this.modalMain !== this.lastModalMain || this.modalChat !== this.lastModalChat || this.modalSide !== this.lastModalSide || this.refreshModalClose) {
-            if (this.refreshModalClose) {
+            // (modalState is re-checked because closeModal() can run after an open in the same
+            // tick, in which case the block below writes no IF_OPEN* and the close is still needed)
+            const reopening: boolean = this.refreshModal && this.modalState !== ModalState.NONE;
+            if (this.refreshModalClose && !reopening) {
                 this.write(new IfClose());
             }
             this.refreshModalClose = false;
