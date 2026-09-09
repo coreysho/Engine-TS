@@ -240,6 +240,24 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
         if (player.staffModLevel >= 3) {
             // admin commands (potentially destructive for a live economy)
 
+            if (cmd === 'bank') {
+                // ::bank - open the bank from anywhere. Deliberately goes through
+                // [label,openbank] rather than the bankpin_open_bank_real proc it guards, so a
+                // set bank PIN is still enforced instead of being sidestepped by the cheat.
+                if (!player.canAccess()) {
+                    player.messageGame('Please finish what you are doing first.');
+                    return false;
+                }
+
+                const openbank = ScriptProvider.getByName('[label,openbank]');
+                if (!openbank) {
+                    return false;
+                }
+
+                player.executeScript(ScriptRunner.init(openbank, player), false);
+                return true;
+            }
+
             if (cmd === 'setvar') {
                 // authentic
                 if (args.length < 2) {
