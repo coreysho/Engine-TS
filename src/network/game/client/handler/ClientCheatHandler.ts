@@ -241,9 +241,17 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
             // admin commands (potentially destructive for a live economy)
 
             if (cmd === 'bank') {
-                // ::bank - open the bank from anywhere. Deliberately goes through
-                // [label,openbank] rather than the bankpin_open_bank_real proc it guards, so a
-                // set bank PIN is still enforced instead of being sidestepped by the cheat.
+                // ::bank - open the bank from anywhere.
+                //
+                // executeScript's second argument is `protect`, and it has to be true here.
+                // openbank falls through to the bank PIN keypad when a PIN is set, and
+                // bankpin_start_entry's first statement writes %bankpin_flow, a protected varp.
+                // Running it unprotected threw "pop_varp %bankpin_flow requires protected
+                // access" and dropped the client. (The debugproc dispatch above passes false
+                // deliberately - that is why every debugproc calls p_finduid(uid) itself.)
+                //
+                // Routed via openbank rather than the bankpin_open_bank_real proc it guards, so
+                // a set bank PIN is enforced instead of being sidestepped by the cheat.
                 if (!player.canAccess()) {
                     player.messageGame('Please finish what you are doing first.');
                     return false;
@@ -254,7 +262,7 @@ export default class ClientCheatHandler extends ClientGameMessageHandler<ClientC
                     return false;
                 }
 
-                player.executeScript(ScriptRunner.init(openbank, player), false);
+                player.executeScript(ScriptRunner.init(openbank, player), true);
                 return true;
             }
 
