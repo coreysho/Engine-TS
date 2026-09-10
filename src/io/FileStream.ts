@@ -211,6 +211,16 @@ export default class FileStream {
             sector = nextSector;
         }
 
+        // read() above cached the OLD bytes in this.packed; replace them so later reads in the same
+        // process (packClientVersionList's crc pass) see what is now on disk. Without this every
+        // changed map/model got the previous build's crc in the versionlist, so clients kept their
+        // old cached copy (or, with nothing cached, rejected the new file forever).
+        if (this.discardPacked) {
+            delete this.packed[archive][file];
+        } else {
+            this.packed[archive][file] = data;
+        }
+
         return true;
     }
 
