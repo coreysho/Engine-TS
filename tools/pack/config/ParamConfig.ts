@@ -23,7 +23,8 @@ const stats: (string | null)[] = [
     'thieving',
     'slayer',
     'farming',
-    'runecraft'
+    'runecraft',
+    'construction'
 ];
 
 const npcStats = ['hitpoints', 'attack', 'strength', 'defence', 'magic', 'ranged'];

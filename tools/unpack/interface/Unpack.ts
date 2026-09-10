@@ -75,7 +75,8 @@ const STATS = [
     'thieving',
     'slayer',
     'farming',
-    'runecraft'
+    'runecraft',
+    'construction'
 ];
 
 class IfType {

@@ -1,7 +1,7 @@
 import InvType from '#/cache/config/InvType.js';
 import { NetworkPlayer } from '#/engine/entity/NetworkPlayer.js';
 import Player, { getExpByLevel, getLevelByExp } from '#/engine/entity/Player.js';
-import { PlayerStat } from '#/engine/entity/PlayerStat.js';
+import { PLAYER_STAT_COUNT, PlayerStat } from '#/engine/entity/PlayerStat.js';
 import World from '#/engine/World.js';
 import Packet from '#/io/Packet.js';
 import ClientSocket from '#/server/ClientSocket.js';
@@ -9,7 +9,10 @@ import { fromBase37, toBase37 } from '#/util/JString.js';
 
 export class PlayerLoading {
     public static readonly SAV_MAGIC: number = 0x2004;
-    public static readonly SAV_VERSION: number = 7;
+    // 8: stat count prefix before the stats block (Construction, 2026-09-10). Versions <= 7 always
+    //    hold exactly 21 stats. Once a save is written as 8, an engine still on 7 refuses it
+    //    ("Unsupported save version") - back up data/players before deploying this.
+    public static readonly SAV_VERSION: number = 8;
 
     static verify(sav: Packet) {
         if (sav.g2() !== PlayerLoading.SAV_MAGIC) {
@@ -37,7 +40,7 @@ export class PlayerLoading {
         player.lastResponse = World.currentTick;
 
         if (sav.data.length < 2) {
-            for (let i = 0; i < 21; i++) {
+            for (let i = 0; i < PLAYER_STAT_COUNT; i++) {
                 player.stats[i] = 0;
                 player.baseLevels[i] = 1;
                 player.levels[i] = 1;
@@ -87,10 +90,23 @@ export class PlayerLoading {
             player.playtime = sav.g2();
         }
 
-        for (let i = 0; i < 21; i++) {
-            player.stats[i] = sav.g4s();
-            player.baseLevels[i] = getLevelByExp(player.stats[i]);
-            player.levels[i] = sav.g1();
+        const statCount = version >= 8 ? sav.g1() : 21;
+        for (let i = 0; i < statCount; i++) {
+            const xp = sav.g4s();
+            const level = sav.g1();
+            if (i >= PLAYER_STAT_COUNT) {
+                continue; // written by a newer engine with more stats - drop them rather than overrun
+            }
+            player.stats[i] = xp;
+            player.baseLevels[i] = getLevelByExp(xp);
+            player.levels[i] = level;
+        }
+        // stats this save predates (Construction for every v7 save) start at level 1, 0 xp - the
+        // typed arrays default to 0, which would otherwise be read as level 0.
+        for (let i = statCount; i < PLAYER_STAT_COUNT; i++) {
+            player.stats[i] = 0;
+            player.baseLevels[i] = 1;
+            player.levels[i] = 1;
         }
 
         const varpCount = sav.g2();

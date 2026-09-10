@@ -30,7 +30,7 @@ import Obj from '#/engine/entity/Obj.js';
 import PathingEntity from '#/engine/entity/PathingEntity.js';
 import { PlayerLoading } from '#/engine/entity/PlayerLoading.js';
 import { PlayerQueueRequest, PlayerQueueType, QueueType, ScriptArgument } from '#/engine/entity/PlayerQueueRequest.js';
-import { PlayerStat, PlayerStatEnabled, PlayerStatFree, PlayerStatNameMap } from '#/engine/entity/PlayerStat.js';
+import { PLAYER_STAT_COUNT, PlayerStat, PlayerStatEnabled, PlayerStatFree, PlayerStatNameMap } from '#/engine/entity/PlayerStat.js';
 import InputTracking from '#/engine/entity/tracking/InputTracking.js';
 import { WealthEventParams } from '#/engine/entity/tracking/WealthEvent.js';
 import { changeNpcCollision, changePlayerOccCollision, findNaivePath, reachedEntity, reachedLoc, reachedObj } from '#/engine/GameMap.js';
@@ -204,7 +204,10 @@ export default class Player extends PathingEntity {
         sav.p2(this.runenergy);
         sav.p4(this.playtime);
 
-        for (let i = 0; i < 21; i++) {
+        // v8+: the stat count is written first, so adding a stat later (Hunter) is not another
+        // format change - PlayerLoading reads however many the file says and defaults the rest.
+        sav.p1(PLAYER_STAT_COUNT);
+        for (let i = 0; i < PLAYER_STAT_COUNT; i++) {
             sav.p4(this.stats[i]);
             sav.p1(this.levels[i]);
         }
@@ -294,8 +297,8 @@ export default class Player extends PathingEntity {
     lastRunEnergy: number = -1;
     runweight: number = 0;
     playtime: number = 0;
-    stats: Int32Array = new Int32Array(21);
-    levels: Uint8Array = new Uint8Array(21);
+    stats: Int32Array = new Int32Array(PLAYER_STAT_COUNT);
+    levels: Uint8Array = new Uint8Array(PLAYER_STAT_COUNT);
     vars: Int32Array;
     varsString: string[];
     invs: Map<number, Inventory> = new Map<number, Inventory>();
@@ -316,9 +319,9 @@ export default class Player extends PathingEntity {
     combatLevel: number = 3;
     skillLevel: number = 0;
     headicons: number = 0;
-    baseLevels = new Uint8Array(21);
-    lastStats: Int32Array = new Int32Array(21); // we track this so we know to flush stats only once a tick on changes
-    lastLevels: Uint8Array = new Uint8Array(21); // we track this so we know to flush stats only once a tick on changes
+    baseLevels = new Uint8Array(PLAYER_STAT_COUNT);
+    lastStats: Int32Array = new Int32Array(PLAYER_STAT_COUNT); // we track this so we know to flush stats only once a tick on changes
+    lastLevels: Uint8Array = new Uint8Array(PLAYER_STAT_COUNT); // we track this so we know to flush stats only once a tick on changes
     originX: number = -1;
     originZ: number = -1;
     buildArea: BuildArea = new BuildArea(this);
@@ -1897,8 +1900,10 @@ export default class Player extends PathingEntity {
             if (currMilestone > prevMilestone) {
                 this.addSessionLog(LoggerEventType.ADVENTURE, `Reached total level ${currMilestone * milestone}`);
             }
-            if (total === 1881) {
-                this.addSessionLog(LoggerEventType.ADVENTURE, 'Reached total level 1881 - you beat p2p!');
+            // was a hardcoded 1881 (19 enabled stats x 99); derived now that the enabled set changed
+            const maxTotal = PlayerStatEnabled.filter(enabled => enabled).length * 99;
+            if (total === maxTotal) {
+                this.addSessionLog(LoggerEventType.ADVENTURE, `Reached total level ${maxTotal} - you beat p2p!`);
             }
             if (freeTotal === 1485) {
                 this.addSessionLog(LoggerEventType.ADVENTURE, 'Reached total level 1485 - you beat f2p!');

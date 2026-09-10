@@ -153,6 +153,8 @@ function nameToStat(name: string) {
             return 19;
         case 'runecraft':
             return 20;
+        case 'construction':
+            return 21;
     }
 
     return -1;
