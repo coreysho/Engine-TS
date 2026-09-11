@@ -400,6 +400,16 @@ const ServerOps: CommandHandlers = {
         }
     },
 
+    // instance_loccategory(coord $coord, category $category, boolean $visible)(int): hide or show every
+    // template loc of $category in the instance containing $coord; returns how many changed.
+    [ScriptOpcode.INSTANCE_LOCCATEGORY]: state => {
+        const visible = state.popInt() === 1;
+        const [coord, category] = state.popInts(2);
+        const c: CoordGrid = check(coord, CoordValid);
+        const inst = InstanceMap.at(c.x, c.z);
+        state.pushInt(inst ? inst.setCategoryVisible(category, visible) : 0);
+    },
+
     // instance_find(coord $coord)(coord): the base coord (level 0) of the instance containing $coord, or null.
     [ScriptOpcode.INSTANCE_FIND]: state => {
         const c: CoordGrid = check(state.popInt(), CoordValid);

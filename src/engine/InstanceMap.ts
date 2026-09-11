@@ -1,4 +1,5 @@
-import { changeLandCollision, isZoneAllocated } from '#/engine/GameMap.js';
+import LocType from '#/cache/config/LocType.js';
+import { EntityLifeCycle } from '#/engine/entity/EntityLifeCycle.js';
 import World from '#/engine/World.js';
 
 /**
@@ -24,6 +25,16 @@ export default class InstanceMap {
     private static readonly SIZE: number = InstanceMap.INSTANCE_ZONES * 8;
 
     private static readonly instances: Map<number, Instance> = new Map();
+
+    // One counter for every instance, not one per instance: a slot is reused as soon as it is freed, and
+    // a fresh instance counting from 0 again would reach the same (slot, version) pair the player's
+    // client last built - BuildArea would see "nothing changed" and the old scene would stay up. That
+    // is exactly what ::~pohtest 1 after ::~pohtest 0 did (2026-09-11).
+    private static versionCounter: number = 0;
+
+    static nextVersion(): number {
+        return ++InstanceMap.versionCounter;
+    }
 
     /** The instance containing this tile, if any. */
     static at(x: number, z: number): Instance | null {
@@ -57,7 +68,7 @@ export default class InstanceMap {
             World.gameMap.purgeZone(inst.baseX + zx * 8, inst.baseZ + zz * 8, level);
         }
         inst.templates.clear();
-        inst.version++;
+        inst.version = InstanceMap.nextVersion();
         InstanceMap.instances.delete(inst.slot);
     }
 
@@ -82,7 +93,7 @@ export class Instance {
     /** (level, local zone) -> client template code: srcLevel << 24 | srcZoneX << 14 | srcZoneZ << 3 | rot << 1 */
     readonly templates: Map<number, number> = new Map();
     /** Bumped on every template change, so BuildArea knows to resend the region to players inside. */
-    version: number = 0;
+    version: number = InstanceMap.nextVersion();
 
     constructor(slot: number, baseX: number, baseZ: number) {
         this.slot = slot;
@@ -102,6 +113,33 @@ export class Instance {
         return InstanceMap.at(x, z) === this;
     }
 
+    /**
+     * Hide (remove) or show again every template loc of a category across the whole instance - how a
+     * house leaves build mode: its hotspots (category poh_hotspot) go, and with them the door hotspots
+     * that otherwise wall off every doorway. Removed static locs stay in their zone, inactive, so the
+     * client is told (LOC_DEL) and showing them again is just World.addLoc.
+     */
+    setCategoryVisible(category: number, visible: boolean): number {
+        let changed = 0;
+        for (const key of this.templates.keys()) {
+            const { level, zx, zz } = Instance.unpackKey(key);
+            const zone = World.gameMap.getZone(this.baseX + zx * 8, this.baseZ + zz * 8, level);
+            for (const loc of Array.from(zone.getAllLocsUnsafe())) {
+                if (loc.lifecycle !== EntityLifeCycle.RESPAWN || LocType.get(loc.type).category !== category) {
+                    continue;
+                }
+                if (!visible && loc.isActive) {
+                    World.removeLoc(loc, 0);
+                    changed++;
+                } else if (visible && !loc.isActive) {
+                    World.addLoc(loc, 0);
+                    changed++;
+                }
+            }
+        }
+        return changed;
+    }
+
     static decodeTemplate(code: number): { srcLevel: number; srcX: number; srcZ: number; rot: number } {
         return { srcLevel: (code >> 24) & 0x3, srcX: ((code >> 14) & 0x3ff) << 3, srcZ: ((code >> 3) & 0x7ff) << 3, rot: (code >> 1) & 0x3 };
     }
@@ -118,7 +156,7 @@ export class Instance {
         World.gameMap.applyZoneTemplate(srcX, srcZ, srcLevel, this.baseX + zx * 8, this.baseZ + zz * 8, level, rot, true, true, true);
         this.templates.set(Instance.packKey(level, zx, zz), code);
         this.restoreNeighbours(zx, zz, level);
-        this.version++;
+        this.version = InstanceMap.nextVersion();
         return true;
     }
 
@@ -130,7 +168,7 @@ export class Instance {
         const zz = (z - this.baseZ) >> 3;
         this.unapply(zx, zz, level);
         this.restoreNeighbours(zx, zz, level);
-        this.version++;
+        this.version = InstanceMap.nextVersion();
     }
 
     /**
@@ -195,13 +233,8 @@ export class Instance {
     private blockVoid(zx: number, zz: number, level: number): void {
         const x = this.baseX + zx * 8;
         const z = this.baseZ + zz * 8;
-        if (!this.contains(x, z) || !isZoneAllocated(level, x, z)) {
-            return;
-        }
-        for (let tx = 0; tx < 8; tx++) {
-            for (let tz = 0; tz < 8; tz++) {
-                changeLandCollision(x + tx, z + tz, level, true);
-            }
+        if (this.contains(x, z)) {
+            World.gameMap.floorBlockZoneIfAllocated(x, z, level);
         }
     }
 }

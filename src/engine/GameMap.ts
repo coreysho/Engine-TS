@@ -472,6 +472,20 @@ export default class GameMap {
         }
     }
 
+    /** Floor-block every tile of an already-allocated collision zone (instance void; see InstanceMap.blockVoid). */
+    floorBlockZoneIfAllocated(x: number, z: number, level: number): void {
+        x &= ~7;
+        z &= ~7;
+        if (!rsmod.isZoneAllocated(x, z, level)) {
+            return;
+        }
+        for (let tx: number = 0; tx < 8; tx++) {
+            for (let tz: number = 0; tz < 8; tz++) {
+                changeLandCollision(x + tx, z + tz, level, true);
+            }
+        }
+    }
+
     hasMapsquare(x: number, z: number): boolean {
         return this.readRaw(`m${x >> 6}_${z >> 6}`) !== null;
     }

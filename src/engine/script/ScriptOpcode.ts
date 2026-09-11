@@ -70,6 +70,7 @@ export const enum ScriptOpcode {
     INSTANCE_CLEARZONE, // custom (2026-09-11) - empty one instance zone
     INSTANCE_DELETE, // custom (2026-09-11) - free an instance and everything in it
     INSTANCE_FIND, // custom (2026-09-11) - base coord of the instance containing a coord, or null
+    INSTANCE_LOCCATEGORY, // custom (2026-09-11) - hide/show every template loc of a category in an instance (POH hotspots)
 
     // Player ops (2000-2499)
     AFK_EVENT = 2000,
@@ -534,6 +535,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['INSTANCE_CLEARZONE', ScriptOpcode.INSTANCE_CLEARZONE],
     ['INSTANCE_DELETE', ScriptOpcode.INSTANCE_DELETE],
     ['INSTANCE_FIND', ScriptOpcode.INSTANCE_FIND],
+    ['INSTANCE_LOCCATEGORY', ScriptOpcode.INSTANCE_LOCCATEGORY],
 
     ['AFK_EVENT', ScriptOpcode.AFK_EVENT],
     ['ALLOWDESIGN', ScriptOpcode.ALLOWDESIGN],
