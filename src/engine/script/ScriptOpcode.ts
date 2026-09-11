@@ -65,6 +65,11 @@ export const enum ScriptOpcode {
     MIDI_LENGTH,
     BROADCAST_MES, // custom (Corey, 2026-09-04) - sends a game message to every online player, for the rare drop broadcast and similar server-wide notices
     WORLD_MINUTE, // custom (Corey, 2026-09-05) - real-world minutes since 1 Jan 2025 UTC, so farming can grow crops while the player is offline and across restarts
+    INSTANCE_CREATE, // custom (2026-09-11) - instanced regions for Construction: allocate an instance, returns its base coord (InstanceMap.ts)
+    INSTANCE_SETZONE, // custom (2026-09-11) - copy a source zone (collision + locs) onto an instance zone, rotated
+    INSTANCE_CLEARZONE, // custom (2026-09-11) - empty one instance zone
+    INSTANCE_DELETE, // custom (2026-09-11) - free an instance and everything in it
+    INSTANCE_FIND, // custom (2026-09-11) - base coord of the instance containing a coord, or null
 
     // Player ops (2000-2499)
     AFK_EVENT = 2000,
@@ -524,6 +529,11 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['MIDI_LENGTH', ScriptOpcode.MIDI_LENGTH],
     ['BROADCAST_MES', ScriptOpcode.BROADCAST_MES],
     ['WORLD_MINUTE', ScriptOpcode.WORLD_MINUTE],
+    ['INSTANCE_CREATE', ScriptOpcode.INSTANCE_CREATE],
+    ['INSTANCE_SETZONE', ScriptOpcode.INSTANCE_SETZONE],
+    ['INSTANCE_CLEARZONE', ScriptOpcode.INSTANCE_CLEARZONE],
+    ['INSTANCE_DELETE', ScriptOpcode.INSTANCE_DELETE],
+    ['INSTANCE_FIND', ScriptOpcode.INSTANCE_FIND],
 
     ['AFK_EVENT', ScriptOpcode.AFK_EVENT],
     ['ALLOWDESIGN', ScriptOpcode.ALLOWDESIGN],

@@ -289,6 +289,199 @@ export default class GameMap {
         }
     }
 
+    // ---- instanced regions (custom, 2026-09-11: Construction) ----
+    //
+    // A REBUILD_REGION scene is built by the CLIENT from copied 8x8 source zones (Client.buildScene,
+    // World.method16 / method20). The server has to hold the same thing: the destination zone's
+    // collision and its interactable locs, copied from the same source zone with the same rotation.
+    // The rotation maths here is a transcription of the client's WorldRegion.method461-464 - see
+    // claude/poh-instancing.md; change one and the player walks through walls the client draws.
+
+    private readonly rawMapCache: Map<string, Uint8Array | null> = new Map();
+
+    private readRaw(name: string): Uint8Array | null {
+        if (this.rawMapCache.has(name)) {
+            return this.rawMapCache.get(name)!;
+        }
+        let data: Uint8Array | null = null;
+        const zipPath = 'data/pack/.cache/maps-server.zip';
+        if (fs.existsSync(zipPath)) {
+            const entries = unzipSync(fs.readFileSync(zipPath), { filter: (file: { name: string }) => file.name === name });
+            data = entries[name] ?? null;
+        } else if (fs.existsSync(`data/pack/server/maps/${name}`)) {
+            data = fs.readFileSync(`data/pack/server/maps/${name}`);
+        }
+        this.rawMapCache.set(name, data);
+        return data;
+    }
+
+    /** Flags byte per tile of a server-packed land file: [level][x][z] packed like packCoord. */
+    private decodeLandFlags(data: Uint8Array): Int8Array {
+        const lands: Int8Array = new Int8Array(GameMap.MAPSQUARE);
+        const packet: Packet = new Packet(data);
+        for (let level: number = 0; level < GameMap.Y; level++) {
+            for (let x: number = 0; x < GameMap.X; x++) {
+                for (let z: number = 0; z < GameMap.Z; z++) {
+                    while (true) {
+                        const opcode: number = packet.g1();
+                        if (opcode === 0) {
+                            break;
+                        } else if (opcode === 1) {
+                            packet.pos++;
+                            break;
+                        }
+                        if (opcode <= 49) {
+                            packet.pos++;
+                        } else if (opcode <= 81) {
+                            lands[this.packCoord(x, z, level)] = opcode - 49;
+                        }
+                    }
+                }
+            }
+        }
+        return lands;
+    }
+
+    /** Client WorldRegion.method463/464 (locs) - with width = length = 1 they reduce to method461/462 (tiles). */
+    static rotateZoneX(rot: number, x: number, z: number, sizeX: number, sizeZ: number): number {
+        switch (rot & 0x3) {
+            case 0:
+                return x;
+            case 1:
+                return z;
+            case 2:
+                return 7 - x - (sizeX - 1);
+            default:
+                return 7 - z - (sizeZ - 1);
+        }
+    }
+
+    static rotateZoneZ(rot: number, x: number, z: number, sizeX: number, sizeZ: number): number {
+        switch (rot & 0x3) {
+            case 0:
+                return z;
+            case 1:
+                return 7 - x - (sizeX - 1);
+            case 2:
+                return 7 - z - (sizeZ - 1);
+            default:
+                return x;
+        }
+    }
+
+    /**
+     * Apply one 8x8 source zone to a destination zone, rotated: its land collision (`lands`), its
+     * loc collision, and (`placeLocs`, only when adding) its active locs as static zone locs.
+     * `add = false` takes the same collision back off - which is how a replaced room's walls stop
+     * flagging the tiles across the zone edge in the room next door (a wall on a zone's south row
+     * also flags the north side of the tile below it). Coordinates are absolute tiles, rounded down to
+     * their zone. Returns false if the source map square is not in the build.
+     */
+    applyZoneTemplate(srcX: number, srcZ: number, srcLevel: number, dstX: number, dstZ: number, dstLevel: number, rot: number, add: boolean, lands: boolean, placeLocs: boolean, inactiveOnly: boolean = false): boolean {
+        srcX &= ~7;
+        srcZ &= ~7;
+        dstX &= ~7;
+        dstZ &= ~7;
+        const mx: number = srcX >> 6;
+        const mz: number = srcZ >> 6;
+        const land: Uint8Array | null = this.readRaw(`m${mx}_${mz}`);
+        const locData: Uint8Array | null = this.readRaw(`l${mx}_${mz}`);
+        if (!land) {
+            return false;
+        }
+        const localX: number = srcX & 0x3f;
+        const localZ: number = srcZ & 0x3f;
+
+        if (add && lands) {
+            // an unallocated collision zone reads as CollisionFlag.NULL (blocked); a room with no
+            // blocking tiles at all must still be walkable
+            rsmod.allocateIfAbsent(dstX, dstZ, dstLevel);
+        }
+        if (lands) {
+            const flagsBySquare: Int8Array = this.decodeLandFlags(land);
+            for (let x: number = 0; x < 8; x++) {
+                for (let z: number = 0; z < 8; z++) {
+                    const flags: number = flagsBySquare[this.packCoord(localX + x, localZ + z, srcLevel)];
+                    const tx: number = dstX + GameMap.rotateZoneX(rot, x, z, 1, 1);
+                    const tz: number = dstZ + GameMap.rotateZoneZ(rot, x, z, 1, 1);
+                    if ((flags & GameMap.REMOVE_ROOFS) !== GameMap.OPEN) {
+                        changeRoofCollision(tx, tz, dstLevel, add);
+                    }
+                    // bridges (LINK_BELOW) are not carried across: no template the build copies uses them
+                    if ((flags & GameMap.BLOCK_MAP_SQUARE) === GameMap.BLOCK_MAP_SQUARE) {
+                        changeLandCollision(tx, tz, dstLevel, add);
+                    }
+                }
+            }
+        }
+
+        if (!locData) {
+            return true;
+        }
+        const zone: Zone = this.getZone(dstX, dstZ, dstLevel);
+        const packet: Packet = new Packet(locData);
+        let locId: number = -1;
+        let locIdOffset: number = packet.gsmarts();
+        while (locIdOffset !== 0) {
+            locId += locIdOffset;
+            let coord: number = 0;
+            let coordOffset: number = packet.gsmarts();
+            while (coordOffset !== 0) {
+                const { x, z, level } = this.unpackCoord((coord += coordOffset - 1));
+                const info: number = packet.g1();
+                coordOffset = packet.gsmarts();
+                if (level !== srcLevel || x < localX || x >= localX + 8 || z < localZ || z >= localZ + 8) {
+                    continue;
+                }
+                const type: LocType = LocType.get(locId);
+                if (!type || (inactiveOnly && type.active)) {
+                    continue;
+                }
+                const shape: number = info >> 2;
+                const angle: number = info & 0x3;
+                // client WorldRegion.method463/464: the footprint is measured at the loc's ORIGINAL angle
+                const odd: boolean = (angle & 0x1) === 1;
+                const sizeX: number = odd ? type.length : type.width;
+                const sizeZ: number = odd ? type.width : type.length;
+                const tx: number = dstX + GameMap.rotateZoneX(rot, x & 0x7, z & 0x7, sizeX, sizeZ);
+                const tz: number = dstZ + GameMap.rotateZoneZ(rot, x & 0x7, z & 0x7, sizeX, sizeZ);
+                const newAngle: number = (angle + rot) & 0x3;
+                if (type.blockwalk) {
+                    changeLocCollision(shape, newAngle, type.blockrange, type.length, type.width, type.active, tx, tz, dstLevel, add);
+                }
+                if (add && placeLocs && type.active) {
+                    zone.addStaticLoc(new Loc(dstLevel, tx, tz, type.width, type.length, EntityLifeCycle.RESPAWN, locId, shape, newAngle));
+                }
+            }
+            locIdOffset = packet.gsmarts();
+        }
+        return true;
+    }
+
+    /**
+     * Add (or remove) the collision of every loc currently live in a zone - static template locs,
+     * ones a script changed, and script-added ones - at their current type, shape and angle.
+     * Collision adds are ORs, so re-adding what is already there changes nothing.
+     */
+    applyLiveLocCollision(x: number, z: number, level: number, add: boolean): void {
+        for (const loc of this.getZone(x, z, level).getAllLocsSafe()) {
+            const type: LocType = LocType.get(loc.type);
+            if (type.blockwalk) {
+                changeLocCollision(loc.shape, loc.angle, type.blockrange, type.length, type.width, type.active, loc.x, loc.z, loc.level, add);
+            }
+        }
+    }
+
+    hasMapsquare(x: number, z: number): boolean {
+        return this.readRaw(`m${x >> 6}_${z >> 6}`) !== null;
+    }
+
+    /** Wipe a zone back to nothing: every loc and obj in it (static or not) and its collision. */
+    purgeZone(x: number, z: number, level: number): void {
+        this.getZone(x, z, level).purge();
+        rsmod.deallocateIfPresent(x, z, level);
+    }
+
     private loadCsvMap(map: Set<number>, csv: string[]): void {
         // easiest solution for the time being
         for (let index: number = 0; index < csv.length; index++) {

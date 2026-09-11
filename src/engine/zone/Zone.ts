@@ -224,6 +224,31 @@ export default class Zone {
         this.entityEvents.clear();
     }
 
+    /**
+     * Instanced regions (custom, 2026-09-11): empty the zone of every loc and obj - static or
+     * dynamic - so GameMap.applyZoneTemplate can lay a different source zone over it, or an instance can be
+     * torn down. Each entity is untracked from the lifecycle queue first, so a respawn timer that was
+     * pending cannot put it back into a zone that no longer has it. Players and npcs are left alone;
+     * the caller moves them.
+     */
+    purge(): void {
+        for (const loc of Array.from(this.locs.all())) {
+            loc.setLifeCycle(-1);
+            loc.isActive = false;
+            loc.unlink();
+        }
+        for (const obj of Array.from(this.objs.all())) {
+            obj.setLifeCycle(-1);
+            obj.isActive = false;
+            obj.unlink();
+        }
+        this.locsCount = 0;
+        this.objsCount = 0;
+        this.shared = null;
+        this.events.clear();
+        this.entityEvents.clear();
+    }
+
     // ---- static locs/objs are added during world init ----
 
     addStaticLoc(loc: Loc): void {

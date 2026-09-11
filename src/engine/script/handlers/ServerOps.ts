@@ -8,6 +8,7 @@ import { ScriptOpcode } from '#/engine/script/ScriptOpcode.js';
 import { CommandHandlers } from '#/engine/script/ScriptRunner.js';
 import ScriptState from '#/engine/script/ScriptState.js';
 import { check, CoordValid, LocTypeValid, NumberPositive, SeqTypeValid, SpotAnimTypeValid, FindSquareValid } from '#/engine/script/ScriptValidators.js';
+import InstanceMap from '#/engine/InstanceMap.js';
 import World from '#/engine/World.js';
 import Environment from '#/util/Environment.js';
 import Midi from '#/cache/midi/Midi.js';
@@ -361,6 +362,49 @@ const ServerOps: CommandHandlers = {
     [ScriptOpcode.WORLD_MINUTE]: state => {
         const epoch = Date.UTC(2025, 0, 1);
         state.pushInt(Math.max(0, Math.floor((Date.now() - epoch) / 60000)));
+    },
+
+    // ---- instanced regions (custom, 2026-09-11) - see engine/InstanceMap.ts ----
+
+    // instance_create()(coord): a fresh, empty instance; its south-west tile on level 0, or null.
+    [ScriptOpcode.INSTANCE_CREATE]: state => {
+        const inst = InstanceMap.create();
+        state.pushInt(inst ? CoordGrid.packCoord(0, inst.baseX, inst.baseZ) : -1);
+    },
+
+    // instance_setzone(coord $dst, coord $src, int $rot)(boolean): lay the source zone containing $src
+    // (on $src's level) over the instance zone containing $dst (on $dst's level), rotated $rot * 90
+    // degrees clockwise. False if $dst is not in an instance or $src's map square is not in the build.
+    [ScriptOpcode.INSTANCE_SETZONE]: state => {
+        const rot = state.popInt();
+        const [dst, src] = state.popInts(2);
+        const d: CoordGrid = check(dst, CoordValid);
+        const s: CoordGrid = check(src, CoordValid);
+        const inst = InstanceMap.at(d.x, d.z);
+        state.pushInt(inst && inst.setZone(d.x, d.z, d.level, s.x, s.z, s.level, rot & 0x3) ? 1 : 0);
+    },
+
+    // instance_clearzone(coord $dst): empty the instance zone containing $dst (on its level).
+    [ScriptOpcode.INSTANCE_CLEARZONE]: state => {
+        const d: CoordGrid = check(state.popInt(), CoordValid);
+        InstanceMap.at(d.x, d.z)?.clearZone(d.x, d.z, d.level);
+    },
+
+    // instance_delete(coord $coord): free the instance containing $coord. Move players out first -
+    // anyone left inside is standing on unallocated collision, which blocks every step.
+    [ScriptOpcode.INSTANCE_DELETE]: state => {
+        const c: CoordGrid = check(state.popInt(), CoordValid);
+        const inst = InstanceMap.at(c.x, c.z);
+        if (inst) {
+            InstanceMap.delete(inst);
+        }
+    },
+
+    // instance_find(coord $coord)(coord): the base coord (level 0) of the instance containing $coord, or null.
+    [ScriptOpcode.INSTANCE_FIND]: state => {
+        const c: CoordGrid = check(state.popInt(), CoordValid);
+        const inst = InstanceMap.at(c.x, c.z);
+        state.pushInt(inst ? CoordGrid.packCoord(0, inst.baseX, inst.baseZ) : -1);
     }
 };
 

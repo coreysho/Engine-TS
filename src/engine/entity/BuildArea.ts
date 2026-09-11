@@ -2,7 +2,9 @@ import { CoordGrid } from '#/engine/CoordGrid.js';
 import Player from '#/engine/entity/Player.js';
 import World from '#/engine/World.js';
 import ZoneMap from '#/engine/zone/ZoneMap.js';
+import InstanceMap from '#/engine/InstanceMap.js';
 import RebuildNormal from '#/network/game/server/model/RebuildNormal.js';
+import RebuildRegion from '#/network/game/server/model/RebuildRegion.js';
 
 export default class BuildArea {
     // constructor
@@ -12,6 +14,12 @@ export default class BuildArea {
     readonly mapsquares: Set<number>;
     
     lastBuild: number = -1;
+    // Instanced regions (custom, 2026-09-11): which instance (slot) and template version the client's
+    // current scene was built from; -1 = a normal map scene. A change either way forces a rebuild, since
+    // walking in or out of an instance - or the owner laying a new room while you stand in it - has to
+    // swap the whole scene even when the player never leaves the reload bounds.
+    lastInstanceSlot: number = -1;
+    lastInstanceVersion: number = -1;
 
     constructor(player: Player) {
         this.player = player;
@@ -22,6 +30,8 @@ export default class BuildArea {
 
     clear(reconnecting: boolean): void {
         if (!reconnecting) {
+            this.lastInstanceSlot = -1;
+            this.lastInstanceVersion = -1;
             this.activeZones.clear();
             this.loadedZones.clear();
             this.mapsquares.clear();
@@ -63,8 +73,13 @@ export default class BuildArea {
         const reloadTopZ = (originZ + 5) << 3;
         const reloadBottomZ = (originZ - 4) << 3;
 
+        const instance = InstanceMap.at(this.player.x, this.player.z);
+        const instanceSlot = instance ? instance.slot : -1;
+        const instanceVersion = instance ? instance.version : -1;
+        const instanceChanged = instanceSlot !== this.lastInstanceSlot || instanceVersion !== this.lastInstanceVersion;
+
         // if the build area should be regenerated, do so now
-        if (this.player.x < reloadLeftX || this.player.z < reloadBottomZ || this.player.x > reloadRightX - 1 || this.player.z > reloadTopZ - 1 || reconnect) {
+        if (this.player.x < reloadLeftX || this.player.z < reloadBottomZ || this.player.x > reloadRightX - 1 || this.player.z > reloadTopZ - 1 || reconnect || instanceChanged) {
             const zoneX: number = CoordGrid.zone(this.player.x);
             const zoneZ: number = CoordGrid.zone(this.player.z);
 
@@ -83,7 +98,29 @@ export default class BuildArea {
                 }
             }
 
-            this.player.write(new RebuildNormal(zoneX, zoneZ, this.mapsquares));
+            if (instance) {
+                const templates = new Int32Array(4 * 13 * 13);
+                for (let level = 0; level < 4; level++) {
+                    for (let x = 0; x < 13; x++) {
+                        for (let z = 0; z < 13; z++) {
+                            templates[(level * 13 + x) * 13 + z] = InstanceMap.templateAt(level, minX + x, minZ + z);
+                        }
+                    }
+                }
+                // The client ignores a rebuild centred on the zone it already has loaded
+                // (Client.java ptype 222/53: `if (sceneCenterZoneX == x && sceneCenterZoneZ == z &&
+                // sceneState == 2) return`), so a room laid while the player stands still would never
+                // appear. Point it at a neighbouring centre first - an empty scene it starts loading and
+                // then abandons - and the real rebuild that follows is no longer a no-op.
+                if (instanceSlot === this.lastInstanceSlot && zoneX === CoordGrid.zone(this.player.originX) && zoneZ === CoordGrid.zone(this.player.originZ)) {
+                    this.player.write(new RebuildRegion(zoneX + 1, zoneZ, new Int32Array(4 * 13 * 13).fill(-1)));
+                }
+                this.player.write(new RebuildRegion(zoneX, zoneZ, templates));
+            } else {
+                this.player.write(new RebuildNormal(zoneX, zoneZ, this.mapsquares));
+            }
+            this.lastInstanceSlot = instanceSlot;
+            this.lastInstanceVersion = instanceVersion;
 
             this.player.originX = this.player.x;
             this.player.originZ = this.player.z;
