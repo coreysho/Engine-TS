@@ -14,7 +14,16 @@ export default {
     WEB_MANAGEMENT_PORT: tryParseInt(process.env.WEB_MANAGEMENT_PORT, 8898),
 
     /// game server
-    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 377),
+    // Build handshake, NOT the RS protocol revision. The client sends this in its login
+    // block (Client.java, `this.login.p2(...)`) and World.onClientData rejects a mismatch
+    // with login response 6, "your client is out of date". Bump BOTH sides together
+    // whenever a client change is mandatory - it is the only way a stale jar gets turned
+    // away at the door instead of crashing someone mid-fight.
+    //   378 = the walk-merge skeleton guard (Model.method368). An unpatched client throws
+    //         ArrayIndexOutOfBounds on eat-while-walking with a godsword.
+    // Escape hatch: ENGINE_REVISION=377 in the server's .env lets old clients back in
+    // without a rebuild, if a cutover has to be rolled back in a hurry.
+    ENGINE_REVISION: tryParseInt(process.env.ENGINE_REVISION, 378),
     // world id - offset by 9, so 1 = 10, 2 = 11, etc
     NODE_ID: tryParseInt(process.env.NODE_ID, 10),
     NODE_PORT: tryParseInt(process.env.NODE_PORT, 43594),
