@@ -30,6 +30,10 @@ export default class ServerGameProt {
     // whole inv. Bank tabs use it so the "all items" view breaks between tabs the way OSRS does.
     // Zeros mean no break. Not an official 377 opcode.
     static readonly IF_SETINVBREAKS = new ServerGameProt(7, 18);
+    // Replace one of an inv component's five right-click option strings: component, op index 1-5,
+    // text. The bank uses it so the left click reads "Withdraw 10" when 10 is the chosen default
+    // quantity. Not an official 377 opcode - 8 was free in this table.
+    static readonly IF_SETINVOP = new ServerGameProt(8, -1);
 
     // tutorial area
     static readonly TUT_FLASH = new ServerGameProt(238, 1);

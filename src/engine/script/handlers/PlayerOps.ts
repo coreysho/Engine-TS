@@ -52,6 +52,7 @@ import IfSetPosition from '#/network/game/server/model/IfSetPosition.js';
 import IfSetRotation from '#/network/game/server/model/IfSetRotation.js';
 import IfSetScrollPos from '#/network/game/server/model/IfSetScrollPos.js';
 import IfSetInvWindow from '#/network/game/server/model/IfSetInvWindow.js';
+import IfSetInvOp from '#/network/game/server/model/IfSetInvOp.js';
 import IfSetInvBreaks from '#/network/game/server/model/IfSetInvBreaks.js';
 import IfSetTabActive from '#/network/game/server/model/IfSetTabActive.js';
 import IfSetText from '#/network/game/server/model/IfSetText.js';
@@ -853,6 +854,15 @@ const PlayerOps: CommandHandlers = {
         check(com, NumberNotNull);
 
         state.activePlayer.write(new IfSetInvBreaks(com, args.slice(1)));
+    },
+
+    [ScriptOpcode.IF_SETINVOP]: state => {
+        const text = state.popString();
+        const [com, op] = state.popInts(2);
+
+        check(com, NumberNotNull);
+
+        state.activePlayer.write(new IfSetInvOp(com, op, text));
     },
 
     [ScriptOpcode.STAT_ADVANCE]: state => {
