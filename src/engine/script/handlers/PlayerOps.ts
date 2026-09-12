@@ -52,6 +52,7 @@ import IfSetPosition from '#/network/game/server/model/IfSetPosition.js';
 import IfSetRotation from '#/network/game/server/model/IfSetRotation.js';
 import IfSetScrollPos from '#/network/game/server/model/IfSetScrollPos.js';
 import IfSetInvWindow from '#/network/game/server/model/IfSetInvWindow.js';
+import IfSetInvBreaks from '#/network/game/server/model/IfSetInvBreaks.js';
 import IfSetTabActive from '#/network/game/server/model/IfSetTabActive.js';
 import IfSetText from '#/network/game/server/model/IfSetText.js';
 import MinimapToggle from '#/network/game/server/model/MinimapToggle.js';
@@ -843,6 +844,15 @@ const PlayerOps: CommandHandlers = {
         check(com, NumberNotNull);
 
         state.activePlayer.write(new IfSetInvWindow(com, first, count));
+    },
+
+    [ScriptOpcode.IF_SETINVBREAKS]: state => {
+        const args = state.popInts(9);
+        const com = args[0];
+
+        check(com, NumberNotNull);
+
+        state.activePlayer.write(new IfSetInvBreaks(com, args.slice(1)));
     },
 
     [ScriptOpcode.STAT_ADVANCE]: state => {

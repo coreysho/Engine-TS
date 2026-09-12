@@ -26,6 +26,10 @@ export default class ServerGameProt {
     // Show only part of a transmitted inv on a component: component, first slot, count.
     // Not an official 377 opcode - added for bank tabs. 4 was free in this table.
     static readonly IF_SETINVWINDOW = new ServerGameProt(4, 6);
+    // Eight slot numbers at which the component should start a fresh row when it is showing the
+    // whole inv. Bank tabs use it so the "all items" view breaks between tabs the way OSRS does.
+    // Zeros mean no break. Not an official 377 opcode.
+    static readonly IF_SETINVBREAKS = new ServerGameProt(7, 18);
 
     // tutorial area
     static readonly TUT_FLASH = new ServerGameProt(238, 1);

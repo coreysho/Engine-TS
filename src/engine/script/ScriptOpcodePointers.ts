@@ -549,6 +549,9 @@ const ScriptOpcodePointers: {
     [ScriptOpcode.IF_SETINVWINDOW]: {
         require: ['active_player']
     },
+    [ScriptOpcode.IF_SETINVBREAKS]: {
+        require: ['active_player']
+    },
     [ScriptOpcode.SET_PLAYER_OP]: {
         require: ['active_player']
     },
