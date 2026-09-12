@@ -125,6 +125,7 @@ export const enum ScriptOpcode {
     IF_ADDRESUMEBUTTON,
     IF_SETROTATION,
     IF_SETSCROLLPOS, // official
+    IF_SETINVWINDOW,
     IF_SETTAB,
     IF_SETTABACTIVE,
     IF_SETTEXT, // official
@@ -134,6 +135,7 @@ export const enum ScriptOpcode {
     LAST_LOGIN_INFO,
     LAST_SLOT, // official
     LAST_TARGETSLOT,
+    LAST_DRAGMODE,
     LAST_USEITEM, // official
     LAST_USESLOT, // official
     LONGQUEUE, // official
@@ -589,6 +591,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['IF_SETPOSITION', ScriptOpcode.IF_SETPOSITION],
     ['IF_ADDRESUMEBUTTON', ScriptOpcode.IF_ADDRESUMEBUTTON],
     ['IF_SETSCROLLPOS', ScriptOpcode.IF_SETSCROLLPOS],
+    ['IF_SETINVWINDOW', ScriptOpcode.IF_SETINVWINDOW],
     ['IF_SETTAB', ScriptOpcode.IF_SETTAB],
     ['IF_SETTABACTIVE', ScriptOpcode.IF_SETTABACTIVE],
     ['IF_SETTEXT', ScriptOpcode.IF_SETTEXT],
@@ -598,6 +601,7 @@ export const ScriptOpcodeMap: Map<string, number> = new Map([
     ['LAST_LOGIN_INFO', ScriptOpcode.LAST_LOGIN_INFO],
     ['LAST_SLOT', ScriptOpcode.LAST_SLOT],
     ['LAST_TARGETSLOT', ScriptOpcode.LAST_TARGETSLOT],
+    ['LAST_DRAGMODE', ScriptOpcode.LAST_DRAGMODE],
     ['LAST_USEITEM', ScriptOpcode.LAST_USEITEM],
     ['LAST_USESLOT', ScriptOpcode.LAST_USESLOT],
     ['LONGQUEUE', ScriptOpcode.LONGQUEUE],

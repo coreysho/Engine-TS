@@ -144,7 +144,9 @@ import UpdateZonePartialFollows from '#/network/game/server/model/UpdateZonePart
 import VarpLarge from '#/network/game/server/model/VarpLarge.js';
 import VarpSmall from '#/network/game/server/model/VarpSmall.js';
 import IfSetScrollPos from '#/network/game/server/model/IfSetScrollPos.js';
+import IfSetInvWindow from '#/network/game/server/model/IfSetInvWindow.js';
 import IfSetScrollPosEncoder from '#/network/game/server/codec/IfSetScrollPosEncoder.js';
+import IfSetInvWindowEncoder from '#/network/game/server/codec/IfSetInvWindowEncoder.js';
 import SetPlayerOp from '#/network/game/server/model/SetPlayerOp.js';
 import SetPlayerOpEncoder from '#/network/game/server/codec/SetPlayerOpEncoder.js';
 import FriendlistLoaded from '#/network/game/server/model/FriendlistLoaded.js';
@@ -197,6 +199,7 @@ class ServerGameProtRepository {
         this.bind(IfSetPosition, new IfSetPositionEncoder());
         this.bind(IfSetRotation, new IfSetRotationEncoder());
         this.bind(IfSetScrollPos, new IfSetScrollPosEncoder());
+        this.bind(IfSetInvWindow, new IfSetInvWindowEncoder());
         this.bind(IfSetText, new IfSetTextEncoder());
         this.bind(IfSetTabActive, new IfSetTabActiveEncoder());
         this.bind(LastLoginInfo, new LastLoginInfoEncoder());

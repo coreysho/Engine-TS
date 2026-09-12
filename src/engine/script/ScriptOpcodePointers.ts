@@ -256,6 +256,9 @@ const ScriptOpcodePointers: {
     [ScriptOpcode.LAST_TARGETSLOT]: {
         require: ['last_targetslot']
     },
+    [ScriptOpcode.LAST_DRAGMODE]: {
+        require: ['last_targetslot']
+    },
     [ScriptOpcode.LAST_USEITEM]: {
         require: ['last_useitem']
     },
@@ -541,6 +544,9 @@ const ScriptOpcodePointers: {
         require2: ['p_active_player2']
     },
     [ScriptOpcode.IF_SETSCROLLPOS]: {
+        require: ['active_player']
+    },
+    [ScriptOpcode.IF_SETINVWINDOW]: {
         require: ['active_player']
     },
     [ScriptOpcode.SET_PLAYER_OP]: {

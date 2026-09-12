@@ -23,6 +23,9 @@ export default class ServerGameProt {
     static readonly IF_SETNPCHEAD = new ServerGameProt(162, 4);
     static readonly IF_SETPOSITION = new ServerGameProt(166, 6);
     static readonly IF_SETSCROLLPOS = new ServerGameProt(200, 4);
+    // Show only part of a transmitted inv on a component: component, first slot, count.
+    // Not an official 377 opcode - added for bank tabs. 4 was free in this table.
+    static readonly IF_SETINVWINDOW = new ServerGameProt(4, 6);
 
     // tutorial area
     static readonly TUT_FLASH = new ServerGameProt(238, 1);

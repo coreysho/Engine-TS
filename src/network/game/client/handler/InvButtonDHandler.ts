@@ -10,8 +10,7 @@ import Environment from '#/util/Environment.js';
 
 export default class InvButtonDHandler extends ClientGameMessageHandler<InvButtonD> {
     handle(message: InvButtonD, player: Player): boolean {
-        const { com: comId, slot, targetSlot } = message;
-        // todo: is it necessary to pass message.mode to script? is it just verification?
+        const { com: comId, slot, targetSlot, mode } = message;
 
         const com = Component.get(comId);
         if (typeof com === 'undefined' || (!com.draggable && !com.swappable)) {
@@ -45,6 +44,11 @@ export default class InvButtonDHandler extends ClientGameMessageHandler<InvButto
 
         player.lastSlot = slot;
         player.lastTargetSlot = targetSlot;
+        // The mode byte used to be decoded and thrown away. Scripts need it now: the client sets
+        // it to 100 + n when a drag was dropped on bank tab n, which is the only way that gesture
+        // can be expressed - this packet carries ONE component and both slots have to be valid
+        // slots of that same inv, so a tab button cannot be the target.
+        player.lastDragMode = mode;
 
         const script = ScriptProvider.getByTrigger(ServerTriggerType.INV_BUTTOND, comId);
         if (script) {

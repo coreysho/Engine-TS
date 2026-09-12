@@ -51,6 +51,7 @@ import IfSetPlayerHead from '#/network/game/server/model/IfSetPlayerHead.js';
 import IfSetPosition from '#/network/game/server/model/IfSetPosition.js';
 import IfSetRotation from '#/network/game/server/model/IfSetRotation.js';
 import IfSetScrollPos from '#/network/game/server/model/IfSetScrollPos.js';
+import IfSetInvWindow from '#/network/game/server/model/IfSetInvWindow.js';
 import IfSetTabActive from '#/network/game/server/model/IfSetTabActive.js';
 import IfSetText from '#/network/game/server/model/IfSetText.js';
 import MinimapToggle from '#/network/game/server/model/MinimapToggle.js';
@@ -836,6 +837,14 @@ const PlayerOps: CommandHandlers = {
         state.activePlayer.write(new IfSetScrollPos(com, y));
     },
 
+    [ScriptOpcode.IF_SETINVWINDOW]: state => {
+        const [com, first, count] = state.popInts(3);
+
+        check(com, NumberNotNull);
+
+        state.activePlayer.write(new IfSetInvWindow(com, first, count));
+    },
+
     [ScriptOpcode.STAT_ADVANCE]: state => {
         const [stat, xp] = state.popInts(2);
 
@@ -1116,6 +1125,15 @@ const PlayerOps: CommandHandlers = {
         }
 
         state.pushInt(state.activePlayer.lastTargetSlot);
+    },
+
+    [ScriptOpcode.LAST_DRAGMODE]: state => {
+        const allowedTriggers = [ServerTriggerType.INV_BUTTOND];
+        if (!allowedTriggers.includes(state.trigger)) {
+            throw new Error('is not safe to use in this trigger');
+        }
+
+        state.pushInt(state.activePlayer.lastDragMode);
     },
 
     [ScriptOpcode.WALKTRIGGER]: state => {
